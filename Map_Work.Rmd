@@ -1,0 +1,225 @@
+---
+title: "Map_Work"
+author: "Philipp Hoeper"
+date: "02/05/2020"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(glue)
+library(plotly)
+library(dygraphs)
+library(xts)
+library(reactable)
+library(lubridate)
+```
+
+## Importing Data
+
+```{r}
+base_url <-
+  paste0(
+    "https://raw.githubusercontent.com/CSSEGISandData",
+    "/COVID-19/master/csse_covid_19_data/",
+    "csse_covid_19_daily_reports/"
+  )
+
+## currently just one dayb:
+date_latest <-"04-25-2020"
+
+extension <- ".csv"
+
+url <- paste0(base_url, date_latest, extension)
+
+daily <- read_csv(file = url) %>% 
+  rename(country_or_region = "Country_Region") %>% 
+  rename(Province_or_State = "Province_State")
+```
+
+COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
+https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
+base_url <-
+  paste0('https://raw.githubusercontent.com/',
+         'CSSEGISandData/COVID-19/master/',
+         'csse_covid_19_data/csse_covid_19_time_series/')
+
+
+
+```{r}
+base_url <-
+  paste0('https://raw.githubusercontent.com/CSSEGISandData',
+    '/COVID-19/master/csse_covid_19_data/',
+         'csse_covid_19_time_series/')
+
+filename <- 
+  paste0('time_series_covid19_', 
+         c('confirmed_global', 'deaths_global', 'recovered_global'), '.csv')
+
+
+url <- paste0(base_url, filename)
+url
+```
+Confirmed <- url[1] %>% 
+  read_csv(col_types = cols(
+    .default = col_double(),
+    `Province/State` = col_character(),
+    `Country/Region` = col_character()
+  )) %>%
+  rename(country_or_region = `Country/Region`)
+
+```{r}
+Confirmed <- url[1] %>% 
+  read_csv(col_types = cols(
+    .default = col_double(),
+    `Province/State` = col_character(),
+    `Country/Region` = col_character()
+  )) %>%
+  rename(country_or_region = `Country/Region`)
+
+Deaths <- url[2] %>% 
+  read_csv(col_types = cols(
+    .default = col_double(),
+    `Province/State` = col_character(),
+    `Country/Region` = col_character()
+  )) %>%
+  rename(country_or_region = `Country/Region`)
+
+Recovered <- url[3] %>% 
+  read_csv(col_types = cols(
+    .default = col_double(),
+    `Province/State` = col_character(),
+    `Country/Region` = col_character()
+  )) %>%
+  rename(country_or_region = `Country/Region`)
+```
+
+
+
+
+
+```{r}
+reactable::reactable(daily, searchable = TRUE,
+                     pageSizeOptions = c(5, 10, 20), 
+                     defaultPageSize = 5)
+```
+
+```{r}
+extra <- c(
+  "Guam", "Grand Princess", "Virgin Islands, U.S.",
+  "Diamond Princess", "Puerto Rico"
+)
+us <-
+  us %>% 
+  filter(!(Province_or_State %in% extra))
+```
+
+```{r}
+data("statepop", package = "usmap")
+glimpse(statepop)
+```
+
+```{r}
+us <-
+  us %>% 
+  rename(full = Province_or_State) %>% 
+  inner_join(statepop, by = "full") %>% 
+  select(fips, abbr, full, Confirmed, Deaths, Recovered) %>% 
+  mutate(hover = glue::glue(
+    "{full}
+     Deaths: {Deaths}
+     Recovered:  {Recovered}"
+  ))
+```
+
+
+```{r}
+# give state boundaries a red border
+lcol <- list(color = toRGB("red"), width = 2)
+# specify some map projection/options
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+fig <- plot_geo(us, locationmode = 'USA-states',
+                marker = list(line = lcol))
+fig <- fig %>% add_trace(
+  z = ~ Confirmed, text = ~hover, locations = ~abbr,
+  color = ~ Confirmed, colors = 'Purples'
+)
+fig <- fig %>% colorbar(title = "Confirmed Cases")
+
+fig <- fig %>% layout(
+  title = paste0('Confirmed Cases, by State: ', date_latest),
+  geo = g
+)
+
+fig
+```
+df <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv")
+df
+
+
+```{r}
+df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
+
+
+```
+
+```{r}
+glimpse(df)
+```
+
+```{r}
+glimpse(daily)
+```
+```{r}
+df <-
+  df %>% 
+  rename(land = COUNTRY)
+```
+
+```{r}
+world <-
+  daily %>% 
+  rename(land = country_or_region) %>% 
+  right_join(df, by = "land") %>% 
+  select(Province_or_State, land, CODE, Confirmed, Deaths, Recovered, Active) %>% 
+  mutate(hover = glue::glue(
+    "{land}
+     Deaths: {Deaths}
+     Recovered:  {Recovered}"
+  ))
+```
+
+
+```{r}
+df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
+
+# light grey boundaries
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'Mercator')
+)
+
+fig <- plot_geo(world)
+fig <- fig %>% add_trace(
+    z = ~ Confirmed, color = ~ Confirmed, colors = 'Greens',
+    text = ~ hover, locations = ~ CODE, marker = list(line = l)
+  )
+fig <- fig %>% colorbar(title = 'COVID-19 Cases')
+fig <- fig %>% layout(
+    title = paste0('Global COVID-19 Confirmed Cases as of: ',
+                   date_latest),
+    geo = g
+  )
+
+fig
+```
