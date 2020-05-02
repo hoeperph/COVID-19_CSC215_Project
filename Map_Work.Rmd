@@ -1,8 +1,11 @@
 ---
 title: "Map_Work"
 author: "Philipp Hoeper"
-date: "02/05/2020"
-output: html_document
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    highlight: kate
+    toc_depth: 2
 ---
 
 ```{r}
@@ -26,15 +29,13 @@ base_url <-
   )
 
 ## currently just one day:
-date_latest <-"04-25-2020"
+date_latest <-"04-30-2020"
 
 extension <- ".csv"
 
 url <- paste0(base_url, date_latest, extension)
 
-daily <- read_csv(file = url) %>% 
-  rename(country_or_region = "Country_Region") %>% 
-  rename(Province_or_State = "Province_State")
+
 ```
 
 COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
@@ -179,12 +180,48 @@ df <-
   rename(land = COUNTRY)
 ```
 now lets join the two and select the columns that we want, also make a hover tooltip
+
+```{r}
+daily <- read_csv(file = url) %>%
+  rename(country_or_region = "Country_Region") %>%
+  rename(Province_or_State = "Province_State") %>%
+  group_by(country_or_region) %>%
+  summarize(
+    Deaths = sum(Deaths),
+    Confirmed = sum(Confirmed),
+    Recovered = sum(Recovered),
+    Active = sum(Active)
+  ) %>%
+  rename(land = country_or_region) %>%
+  mutate(
+    land = plyr::mapvalues(
+      land,
+      from = c("US", "Taiwan*", "Bahamas", "Congo (Brazzaville)", "Congo (Kinshasa)", "	Gambia"),
+      to = c("United States", "Taiwan", "Bahamas, The", "Congo, Republic of the", "Congo, Democratic Republic of the", "Gambia, The")
+    )
+  )
+```
+Now we have all the same country names apart from Swaziland which recently changed its name to Eswatini
+So lets fix this
+
+```{r}
+df <-
+  df %>% 
+  mutate(
+    land = plyr::mapvalues(
+      land,
+      from = c("Swaziland"),
+      to = c("Eswatini")
+    )
+  ) 
+```
+
+
 ```{r}
 world <-
   daily %>% 
-  rename(land = country_or_region) %>% 
   right_join(df, by = "land") %>% 
-  select(Province_or_State, land, CODE, Confirmed, Deaths, Recovered, Active) %>% 
+  select(land, CODE, Confirmed, Deaths, Recovered, Active) %>% 
   mutate(hover = glue::glue(
     "{land}
      Deaths: {Deaths}
@@ -194,8 +231,6 @@ world <-
 
 Now plot time
 ```{r}
-df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
-
 # light grey boundaries
 l <- list(color = toRGB("grey"), width = 0.5)
 
