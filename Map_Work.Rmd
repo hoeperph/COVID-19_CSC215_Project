@@ -25,7 +25,7 @@ base_url <-
     "csse_covid_19_daily_reports/"
   )
 
-## currently just one dayb:
+## currently just one day:
 date_latest <-"04-25-2020"
 
 extension <- ".csv"
@@ -44,7 +44,7 @@ base_url <-
          'CSSEGISandData/COVID-19/master/',
          'csse_covid_19_data/csse_covid_19_time_series/')
 
-
+## Importing time series data
 
 ```{r}
 base_url <-
@@ -60,13 +60,7 @@ filename <-
 url <- paste0(base_url, filename)
 url
 ```
-Confirmed <- url[1] %>% 
-  read_csv(col_types = cols(
-    .default = col_double(),
-    `Province/State` = col_character(),
-    `Country/Region` = col_character()
-  )) %>%
-  rename(country_or_region = `Country/Region`)
+
 
 ```{r}
 Confirmed <- url[1] %>% 
@@ -96,13 +90,14 @@ Recovered <- url[3] %>%
 
 
 
-
+## Manipulating Daily report data
 
 ```{r}
 reactable::reactable(daily, searchable = TRUE,
                      pageSizeOptions = c(5, 10, 20), 
                      defaultPageSize = 5)
 ```
+this data is for the US map which is not my focus but it is here for the sake of tips
 
 ```{r}
 extra <- c(
@@ -132,7 +127,7 @@ us <-
   ))
 ```
 
-
+Here is the states map once again just for reference a
 ```{r}
 # give state boundaries a red border
 lcol <- list(color = toRGB("red"), width = 2)
@@ -159,29 +154,31 @@ fig <- fig %>% layout(
 
 fig
 ```
-df <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv")
-df
 
 
+## World Map
+
+Lets download a data file that has the nations codes on it 
 ```{r}
 df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
 
 
 ```
-
+lets look at it
 ```{r}
 glimpse(df)
 ```
-
+for comparison lets look at the daily data set
 ```{r}
 glimpse(daily)
 ```
+just for the hell of it
 ```{r}
 df <-
   df %>% 
   rename(land = COUNTRY)
 ```
-
+now lets join the two and select the columns that we want, also make a hover tooltip
 ```{r}
 world <-
   daily %>% 
@@ -195,7 +192,7 @@ world <-
   ))
 ```
 
-
+Now plot time
 ```{r}
 df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
 
@@ -223,3 +220,15 @@ fig <- fig %>% layout(
 
 fig
 ```
+As we can see, the map works but there is a problem for all countries that the data set splits into provinves or states, we need to find a way to change this and make the nations such as US and AUS a summation of their provinces.
+Also we have a problem with US being used as the name of the USA in the covid data set which is not the same as the df data thus US didnt recieve a code hence it is missing in the map.
+
+
+```{r}
+world2 <-
+  world %>% 
+  select(-c(1))
+```
+as we can see if we delete the province row these seperate.
+
+What we want is a way to sum these provinces.
