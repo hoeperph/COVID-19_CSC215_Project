@@ -16,6 +16,9 @@ library(dygraphs)
 library(xts)
 library(reactable)
 library(lubridate)
+library(knitr)
+library(utils)
+library(dplyr)
 ```
 
 ## Importing Data
@@ -91,71 +94,13 @@ Recovered <- url[3] %>%
 
 
 
-## Manipulating Daily report data
+## Looking at the data
 
-```{r}
+```{r, eval= FALSE}
 reactable::reactable(daily, searchable = TRUE,
                      pageSizeOptions = c(5, 10, 20), 
                      defaultPageSize = 5)
 ```
-this data is for the US map which is not my focus but it is here for the sake of tips
-
-```{r}
-extra <- c(
-  "Guam", "Grand Princess", "Virgin Islands, U.S.",
-  "Diamond Princess", "Puerto Rico"
-)
-us <-
-  us %>% 
-  filter(!(Province_or_State %in% extra))
-```
-
-```{r}
-data("statepop", package = "usmap")
-glimpse(statepop)
-```
-
-```{r}
-us <-
-  us %>% 
-  rename(full = Province_or_State) %>% 
-  inner_join(statepop, by = "full") %>% 
-  select(fips, abbr, full, Confirmed, Deaths, Recovered) %>% 
-  mutate(hover = glue::glue(
-    "{full}
-     Deaths: {Deaths}
-     Recovered:  {Recovered}"
-  ))
-```
-
-Here is the states map once again just for reference a
-```{r}
-# give state boundaries a red border
-lcol <- list(color = toRGB("red"), width = 2)
-# specify some map projection/options
-g <- list(
-  scope = 'usa',
-  projection = list(type = 'albers usa'),
-  showlakes = TRUE,
-  lakecolor = toRGB('white')
-)
-
-fig <- plot_geo(us, locationmode = 'USA-states',
-                marker = list(line = lcol))
-fig <- fig %>% add_trace(
-  z = ~ Confirmed, text = ~hover, locations = ~abbr,
-  color = ~ Confirmed, colors = 'Purples'
-)
-fig <- fig %>% colorbar(title = "Confirmed Cases")
-
-fig <- fig %>% layout(
-  title = paste0('Confirmed Cases, by State: ', date_latest),
-  geo = g
-)
-
-fig
-```
-
 
 ## World Map
 
@@ -170,9 +115,7 @@ lets look at it
 glimpse(df)
 ```
 for comparison lets look at the daily data set
-```{r}
-glimpse(daily)
-```
+
 just for the hell of it
 ```{r}
 df <-
@@ -183,8 +126,8 @@ now lets join the two and select the columns that we want, also make a hover too
 
 ```{r}
 daily <- read_csv(file = url) %>%
-  rename(country_or_region = "Country_Region") %>%
-  rename(Province_or_State = "Province_State") %>%
+  rename(country_or_region = 'Country_Region') %>%
+  rename(Province_or_State = 'Province_State') %>%
   group_by(country_or_region) %>%
   summarize(
     Deaths = sum(Deaths),
@@ -259,6 +202,8 @@ As we can see, the map works!!
 
 So thats recent data lets see how the map does over time lets repeat this process for different days 15 days apart
 
+## Map for 04-15-2020
+
 ```{r}
 date_latest2 <- "04-15-2020"
 url2 <- paste0(base_url, date_latest2, extension)
@@ -314,7 +259,7 @@ fig <- fig %>% layout(
 
 fig
 ```
-
+## Map for 03-30-2020
 
 ```{r}
 date_latest3 <- "03-30-2020"
@@ -372,7 +317,8 @@ fig <- fig %>% layout(
 fig
 ```
 
-
+## Map for 03-15-2020
+Note the format of the data is different at this date so we have to change the code slightly
 ```{r}
 date_latest4 <- "03-15-2020"
 url4 <- paste0(base_url, date_latest4, extension)
@@ -396,7 +342,7 @@ daily4 <- read_csv(file = url4) %>%
 
 world4 <-
   daily4 %>% 
-  right_join(df, by = "land") %>% 
+  inner_join(df, by = "land") %>% 
   select(land, CODE, Confirmed, Deaths, Recovered) %>% 
   mutate(hover = glue::glue(
     "{land}
@@ -427,4 +373,38 @@ fig <- fig %>% layout(
 
 fig
 ```
-As we can see if we go back in time we see how the virus has spread over time. We cannot go much further back though without losing countries with no cases as seen in africa. But maybe we can fix this
+As we can see if we go back in time we see how the virus has spread over time. We cannot go much further back though without losing countries with no cases as seen in africa. But maybe there is a way to fix this.
+
+## Summary
+
+We can see some of the movement of the virus as it turns into a global pandemic after starting as an epidemic in China. Sadly because of how in the up to date model the US Dwarfs all other countries in terms of cases, it is difficult to see the differences between the other countries in colour thus I will experiment with a logarithmic scale of confirmed cases to highlight other countries that are struggling to keep the virus under control.
+
+## Up to Date map using logarithmic scale
+
+```{r}
+# light grey boundaries
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'Mercator')
+)
+
+fig <- plot_geo(world)
+fig <- fig %>% add_trace(
+    z = ~ log10(Confirmed), color = ~ log10(Confirmed), colors = 'Greens',
+    text = ~ hover, locations = ~ CODE, marker = list(line = l)
+  )
+fig <- fig %>% colorbar(title = 'log _10 COVID-19 Cases')
+fig <- fig %>% layout(
+    title = paste0('Log_10 of Global COVID-19 Confirmed Cases as of: ',
+                   date_latest),
+    geo = g
+  )
+
+fig
+```
+
+This is amazing, I much prefer this graph as we can show other countries that have a high amount of cases like Italy and Spain, and countries that have not been exposed much by the virus such as Mongolia
