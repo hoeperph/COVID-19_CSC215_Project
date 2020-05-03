@@ -255,15 +255,176 @@ fig <- fig %>% layout(
 
 fig
 ```
-As we can see, the map works but there is a problem for all countries that the data set splits into provinves or states, we need to find a way to change this and make the nations such as US and AUS a summation of their provinces.
-Also we have a problem with US being used as the name of the USA in the covid data set which is not the same as the df data thus US didnt recieve a code hence it is missing in the map.
+As we can see, the map works!!
+
+So thats recent data lets see how the map does over time lets repeat this process for different days 15 days apart
+
+```{r}
+date_latest2 <- "04-15-2020"
+url2 <- paste0(base_url, date_latest2, extension)
+daily2 <- read_csv(file = url2) %>%
+  rename(country_or_region = "Country_Region") %>%
+  rename(Province_or_State = "Province_State") %>%
+  group_by(country_or_region) %>%
+  summarize(
+    Deaths = sum(Deaths),
+    Confirmed = sum(Confirmed),
+    Recovered = sum(Recovered),
+    Active = sum(Active)
+  ) %>%
+  rename(land = country_or_region) %>%
+  mutate(
+    land = plyr::mapvalues(
+      land,
+      from = c("US", "Taiwan*", "Bahamas", "Congo (Brazzaville)", "Congo (Kinshasa)", "	Gambia"),
+      to = c("United States", "Taiwan", "Bahamas, The", "Congo, Republic of the", "Congo, Democratic Republic of the", "Gambia, The")
+    )
+  )
+
+world2 <-
+  daily2 %>% 
+  right_join(df, by = "land") %>% 
+  select(land, CODE, Confirmed, Deaths, Recovered, Active) %>% 
+  mutate(hover = glue::glue(
+    "{land}
+     Deaths: {Deaths}
+     Recovered:  {Recovered}"
+  ))
+ 
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'Mercator')
+)
+
+fig <- plot_geo(world2)
+fig <- fig %>% add_trace(
+    z = ~ Confirmed, color = ~ Confirmed, colors = 'Greens',
+    text = ~ hover, locations = ~ CODE, marker = list(line = l)
+  )
+fig <- fig %>% colorbar(title = 'COVID-19 Cases')
+fig <- fig %>% layout(
+    title = paste0('Global COVID-19 Confirmed Cases as of: ',
+                   date_latest2),
+    geo = g
+  )
+
+fig
+```
 
 
 ```{r}
-world2 <-
-  world %>% 
-  select(-c(1))
-```
-as we can see if we delete the province row these seperate.
+date_latest3 <- "03-30-2020"
+url3 <- paste0(base_url, date_latest3, extension)
+daily3 <- read_csv(file = url3) %>%
+  rename(country_or_region = "Country_Region") %>%
+  rename(Province_or_State = "Province_State") %>%
+  group_by(country_or_region) %>%
+  summarize(
+    Deaths = sum(Deaths),
+    Confirmed = sum(Confirmed),
+    Recovered = sum(Recovered),
+    Active = sum(Active)
+  ) %>%
+  rename(land = country_or_region) %>%
+  mutate(
+    land = plyr::mapvalues(
+      land,
+      from = c("US", "Taiwan*", "Bahamas", "Congo (Brazzaville)", "Congo (Kinshasa)", "	Gambia"),
+      to = c("United States", "Taiwan", "Bahamas, The", "Congo, Republic of the", "Congo, Democratic Republic of the", "Gambia, The")
+    )
+  )
 
-What we want is a way to sum these provinces.
+world3 <-
+  daily3 %>% 
+  right_join(df, by = "land") %>% 
+  select(land, CODE, Confirmed, Deaths, Recovered, Active) %>% 
+  mutate(hover = glue::glue(
+    "{land}
+     Deaths: {Deaths}
+     Recovered:  {Recovered}"
+  ))
+ 
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'Mercator')
+)
+
+fig <- plot_geo(world3)
+fig <- fig %>% add_trace(
+    z = ~ Confirmed, color = ~ Confirmed, colors = 'Greens',
+    text = ~ hover, locations = ~ CODE, marker = list(line = l)
+  )
+fig <- fig %>% colorbar(title = 'COVID-19 Cases')
+fig <- fig %>% layout(
+    title = paste0('Global COVID-19 Confirmed Cases as of: ',
+                   date_latest3),
+    geo = g
+  )
+
+fig
+```
+
+
+```{r}
+date_latest4 <- "03-15-2020"
+url4 <- paste0(base_url, date_latest4, extension)
+daily4 <- read_csv(file = url4) %>%
+  rename(country_or_region = "Country/Region") %>%
+  rename(Province_or_State = "Province/State") %>%
+  group_by(country_or_region) %>%
+  summarize(
+    Deaths = sum(Deaths),
+    Confirmed = sum(Confirmed),
+    Recovered = sum(Recovered)
+  ) %>%
+  rename(land = country_or_region) %>%
+  mutate(
+    land = plyr::mapvalues(
+      land,
+      from = c("US", "Taiwan*", "Bahamas", "Congo (Brazzaville)", "Congo (Kinshasa)", "	Gambia"),
+      to = c("United States", "Taiwan", "Bahamas, The", "Congo, Republic of the", "Congo, Democratic Republic of the", "Gambia, The")
+    )
+  )
+
+world4 <-
+  daily4 %>% 
+  right_join(df, by = "land") %>% 
+  select(land, CODE, Confirmed, Deaths, Recovered) %>% 
+  mutate(hover = glue::glue(
+    "{land}
+     Deaths: {Deaths}
+     Recovered:  {Recovered}"
+  ))
+ 
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'Mercator')
+)
+
+fig <- plot_geo(world4)
+fig <- fig %>% add_trace(
+    z = ~ Confirmed, color = ~ Confirmed, colors = 'Greens',
+    text = ~ hover, locations = ~ CODE, marker = list(line = l)
+  )
+fig <- fig %>% colorbar(title = 'COVID-19 Cases')
+fig <- fig %>% layout(
+    title = paste0('Global COVID-19 Confirmed Cases as of: ',
+                   date_latest4),
+    geo = g
+  )
+
+fig
+```
+As we can see if we go back in time we see how the virus has spread over time. We cannot go much further back though without losing countries with no cases as seen in africa. But maybe we can fix this
